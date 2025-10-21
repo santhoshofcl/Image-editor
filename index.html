@@ -3,7 +3,7 @@
 <head>
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
-<title>Instagram Poster Editor</title>
+<title>Responsive Instagram Poster Editor</title>
 <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
 <style>
@@ -34,13 +34,11 @@ body {
     overflow: hidden;
     width: 90vw;
     max-width: 500px;
-    height: 90vw; /* square default */
+    height: 90vw; /* default square */
     max-height: 500px;
     margin-bottom: 20px;
-    display: block;  /* REMOVE grid */
+    display: block;
 }
-
-/* Draggable Elements */
 .draggable {
     position: absolute;
     cursor: move;
@@ -63,8 +61,6 @@ body {
     height: auto; 
     border-radius: 10px; 
 }
-
-/* Socials & Logo & Date */
 #poster-socials {
     font-style: italic;
     position: absolute;
@@ -101,7 +97,7 @@ body {
 </head>
 <body>
 
-<h2>Instagram Poster Editor</h2>
+<h2>Responsive Instagram Poster Editor</h2>
 
 <div id="controls">
     <select id="post-size" onchange="setPostSize(this.value)">
@@ -161,9 +157,9 @@ const showDateCheckbox = document.getElementById('show-date');
 
 let selectedElement = null;
 
-// Set post size (responsive)
+// Post size
 function setPostSize(size){
-    let widthVW = 90; // default 90vw
+    let widthVW = 90;
     if(size==='square'){ editor.style.height = editor.style.width = widthVW+'vw'; }
     else if(size==='landscape'){ editor.style.width = widthVW+'vw'; editor.style.height = (widthVW*566/1080)+'vw'; }
     else if(size==='vertical'){ editor.style.width = widthVW+'vw'; editor.style.height = (widthVW*1350/1080)+'vw'; }
@@ -172,30 +168,24 @@ function setPostSize(size){
 // Add text
 function addText(){
     if(textInput.value.trim()==="") return;
-    const div = document.createElement('div');
+    const div=document.createElement('div');
     div.classList.add('draggable','text-block');
-    div.contentEditable = true;
-    div.innerText = textInput.value;
+    div.contentEditable=true;
+    div.innerText=textInput.value;
 
-    // Position relative to editor (percent)
-    div.style.top = '10%';
-    div.style.left = '10%';
-
-    // Font-size relative to editor width
-    const editorWidth = editor.clientWidth;
-    div.style.fontSize = (24 / 360 * editorWidth) + 'px';  // 24px default relative to 360px width
-
-    div.style.fontFamily = fontSelect.value;
-
-    // Store responsive positions
-    div.dataset.leftPercent = 10;
+    div.style.top='10%'; 
+    div.style.left='10%'; 
     div.dataset.topPercent = 10;
+    div.dataset.leftPercent = 10;
+
+    const editorWidth = editor.clientWidth;
+    div.style.fontSize = (24 / 360 * editorWidth)+'px';
+    div.style.fontFamily=fontSelect.value;
 
     makeDraggableResizable(div);
     editor.appendChild(div);
-    textInput.value = "";
+    textInput.value="";
 }
-
 
 // Image upload
 imageUpload.addEventListener('change', e=>{
@@ -206,6 +196,7 @@ imageUpload.addEventListener('change', e=>{
             const div=document.createElement('div');
             div.classList.add('draggable','image-block');
             div.style.top='20%'; div.style.left='20%';
+            div.dataset.topPercent = 20; div.dataset.leftPercent = 20;
             div.innerHTML=`<img src="${event.target.result}">`;
             makeDraggableResizable(div);
             editor.appendChild(div);
@@ -225,7 +216,7 @@ bgUpload.addEventListener('change', e=>{
 });
 bgColorPicker.addEventListener('change', e=>{ editor.style.background=e.target.value; });
 
-// Logo upload
+// Logo
 logoUpload.addEventListener('change', e=>{
     const file=e.target.files[0];
     if(file){
@@ -238,42 +229,38 @@ logoUpload.addEventListener('change', e=>{
     }
 });
 
-// Show/Hide date
+// Date
 function toggleDate() {
     if(showDateCheckbox.checked){
         const now = new Date();
-        const day = String(now.getDate()).padStart(2, '0');
-        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
-                            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const day = String(now.getDate()).padStart(2,'0');
+        const monthNames = ["Jan","Feb","Mar","Apr","May","Jun","Jul","Aug","Sep","Oct","Nov","Dec"];
         const month = monthNames[now.getMonth()];
         const year = now.getFullYear();
         posterDate.innerText = `${day} ${month} ${year}`;
         posterDate.style.display = 'block';
-    } else {
-        posterDate.style.display = 'none';
-    }
+    } else { posterDate.style.display = 'none'; }
 }
 
+// Font-size slider
 function setFontSizeSlider(value){
     if(selectedElement){
-        // Convert px to vw relative to editor width
-        let editorWidth = editor.clientWidth;
-        selectedElement.style.fontSize = (value/360*editorWidth)+'px';
+        const editorWidth = editor.clientWidth;
+        selectedElement.style.fontSize = (value / 360 * editorWidth)+'px';
     }
 }
 
-// Drag & Resize (responsive)
+// Drag & Resize
 function makeDraggableResizable(el){
-    el.addEventListener('mousedown', e=>{ 
+    el.addEventListener('mousedown', e=>{
         selectedElement=el; 
-        document.querySelectorAll('.draggable').forEach(d=>d.classList.remove('selected')); 
-        el.classList.add('selected'); 
+        document.querySelectorAll('.draggable').forEach(d=>d.classList.remove('selected'));
+        el.classList.add('selected');
     });
 
     let isDragging=false, offsetX=0, offsetY=0;
-
     el.addEventListener('mousedown', e=>{
-        isDragging=true; 
+        isDragging=true;
         const rect = el.getBoundingClientRect();
         offsetX = e.clientX - rect.left;
         offsetY = e.clientY - rect.top;
@@ -283,15 +270,16 @@ function makeDraggableResizable(el){
     document.addEventListener('mousemove', e=>{
         if(isDragging){
             const rect=editor.getBoundingClientRect();
-            let xPercent = ((e.clientX-offsetX-rect.left)/rect.width)*100;
-            let yPercent = ((e.clientY-offsetY-rect.top)/rect.height)*100;
+            let xPercent = ((e.clientX - offsetX - rect.left)/rect.width)*100;
+            let yPercent = ((e.clientY - offsetY - rect.top)/rect.height)*100;
             xPercent = Math.min(Math.max(0, xPercent), 100);
             yPercent = Math.min(Math.max(0, yPercent), 100);
             el.style.left = xPercent + '%';
             el.style.top = yPercent + '%';
+            el.dataset.leftPercent = xPercent;
+            el.dataset.topPercent = yPercent;
         }
     });
-
     document.addEventListener('mouseup', ()=>{ isDragging=false; });
 
     el.addEventListener('wheel', e=>{
@@ -299,15 +287,11 @@ function makeDraggableResizable(el){
         if(el.classList.contains('text-block')){
             let editorWidth = editor.clientWidth;
             let size = parseInt(window.getComputedStyle(el).fontSize);
-            size += e.deltaY*-0.05;
-            size = Math.max(12, size);
-            el.style.fontSize = size + 'px';
+            size += e.deltaY*-0.05; size = Math.max(12,size);
+            el.style.fontSize = size+'px';
         } else if(el.classList.contains('image-block')){
-            let img = el.querySelector('img'); 
-            let width = img.width + e.deltaY*-0.1; 
-            let height = img.height + e.deltaY*-0.1; 
-            img.style.width=Math.max(30,width)+'px'; 
-            img.style.height='auto';
+            let img = el.querySelector('img');
+            let width = img.width + e.deltaY*-0.1; img.style.width=Math.max(30,width)+'px';
         }
     });
 }
@@ -329,37 +313,26 @@ function downloadPoster(){
     });
 }
 
-// Initialize default
+// Responsive on resize
+window.addEventListener('resize', ()=>{
+    const editorWidth = editor.clientWidth;
+    document.querySelectorAll('.draggable').forEach(el=>{
+        if(el.dataset.leftPercent) el.style.left = el.dataset.leftPercent + '%';
+        if(el.dataset.topPercent) el.style.top = el.dataset.topPercent + '%';
+        if(el.classList.contains('text-block')){
+            const defaultFontPx = 24;
+            el.style.fontSize = (defaultFontPx / 360 * editorWidth)+'px';
+        }
+    });
+});
+
+// Initialize
 window.onload = () => {
     setPostSize(defaultPostSize);
     document.getElementById('post-size').value = defaultPostSize;
     posterLogo.src = defaultLogoSrc;
     posterLogo.style.display = 'block';
 };
-
-window.addEventListener('resize', ()=>{
-    const editorWidth = editor.clientWidth;
-    const editorHeight = editor.clientHeight;
-
-    document.querySelectorAll('.draggable').forEach(el=>{
-        // Position
-        if(el.dataset.leftPercent) el.style.left = el.dataset.leftPercent + '%';
-        if(el.dataset.topPercent) el.style.top = el.dataset.topPercent + '%';
-
-        // Font-size scaling for text-block
-        if(el.classList.contains('text-block')){
-            const defaultFontPx = 24; // default font size
-            el.style.fontSize = (defaultFontPx / 360 * editorWidth) + 'px';
-        }
-
-        // Image scaling (optional)
-        if(el.classList.contains('image-block')){
-            const img = el.querySelector('img');
-            if(img) img.style.width = '20%';
-        }
-    });
-});
-
 </script>
 
 </body>
