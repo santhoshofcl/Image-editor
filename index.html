@@ -1,0 +1,328 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Instagram Poster Editor</title>
+<link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css" rel="stylesheet">
+<script src="https://cdnjs.cloudflare.com/ajax/libs/html2canvas/1.4.1/html2canvas.min.js"></script>
+<style>
+body {
+    font-family: 'Arial', sans-serif;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    background: #f0f2f5;
+    padding: 20px;
+    margin:0;
+}
+#controls, #text-styles {
+    display: flex;
+    flex-wrap: wrap;
+    gap: 10px;
+    margin-bottom: 20px;
+    justify-content: center;
+}
+#controls input, #controls button, #controls select {
+    padding: 8px 12px;
+    font-size: 14px;
+}
+#text-styles button { padding: 5px 8px; }
+#editor {
+    position: relative;
+    background: linear-gradient(to bottom right, #6a11cb, #2575fc);
+    overflow: hidden;
+    width: 90vw;
+    max-width: 500px;
+    height: 90vw; /* square default */
+    max-height: 500px;
+    margin-bottom: 20px;
+}
+
+/* Draggable Elements */
+.draggable {
+    position: absolute;
+    cursor: move;
+    user-select: none;
+    border: 1px dashed transparent;
+    transition: border 0.2s;
+}
+.draggable.selected { border: 1px dashed rgba(255,255,255,0.8); }
+.text-block { 
+    color: white; 
+    font-weight: bold; 
+    padding: 0.2em 0.4em; 
+    min-width: 5%; 
+    min-height: 3%; 
+    font-size: 4vw; 
+    line-height:1.2;
+}
+.image-block img { 
+    width: 20%; 
+    height: auto; 
+    border-radius: 10px; 
+}
+
+/* Socials & Logo & Date */
+#poster-socials {
+    font-style: italic;
+    position: absolute;
+    bottom: 2%;
+    left: 85%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 0.5em;
+}
+#poster-socials a { 
+    color: white; 
+    text-decoration: none; 
+    font-size: 1.5vw;  
+}
+#poster-logo {
+    position: absolute;
+    top: 2%;
+    left: 2%;
+    width: 10%;
+    height: auto;
+    border-radius: 50%;
+    object-fit: cover;
+    display: none;
+}
+#poster-date {
+    position: absolute;
+    top: 2%;
+    right: 2%;
+    color: white;
+    font-size: 1.5vw;
+    font-weight: bold;
+}
+</style>
+</head>
+<body>
+
+<h2>Instagram Poster Editor</h2>
+
+<div id="controls">
+    <select id="post-size" onchange="setPostSize(this.value)">
+        <option value="square">Square 1080x1080</option>
+        <option value="landscape">Landscape 1080x566</option>
+        <option value="vertical">Vertical 1080x1350</option>
+    </select>
+    <input type="text" id="text-input" placeholder="Enter text">
+    <select id="font-select">
+        <option value="Arial">Arial</option>
+        <option value="Verdana">Verdana</option>
+        <option value="Georgia">Georgia</option>
+        <option value="Courier New">Courier New</option>
+        <option value="Impact">Impact</option>
+        <option value="Times New Roman">Times New Roman</option>
+    </select>
+    <button onclick="addText()">Add Text</button>
+    Image Add<input type="file" id="image-upload" accept="image/*">
+    Background-Img Add<input type="file" id="bg-upload" accept="image/*" title="Background Image">
+    <input type="color" id="bg-color-picker" title="Background Color">
+    <button onclick="downloadPoster()">Download Poster</button>
+    Logo-img Add<input type="file" id="logo-upload" accept="image/*" title="Upload Logo">
+    <input type="checkbox" id="show-date" onchange="toggleDate()"> Show Date
+    <input type="range" id="font-size-slider" min="8" max="200" value="24" oninput="setFontSizeSlider(this.value)">
+</div>
+
+<div id="text-styles">
+    <button onclick="setBold()">B</button>
+    <button onclick="setItalic()">I</button>
+    <button onclick="setUnderline()">U</button>
+    <input type="color" id="text-color" onchange="setTextColor(this.value)">
+    <input type="color" id="text-shadow" onchange="setTextShadow(this.value)">
+</div>
+
+<div id="editor">
+    <div id="poster-socials">
+        <a href="#">@brave_santhosh</a>
+    </div>
+    <img id="poster-logo" style="display:none;">
+    <div id="poster-date" style="display:none;"></div>
+</div>
+
+<script>
+const defaultPostSize = 'square';
+const defaultLogoSrc = 'https://your-default-logo-url.com/logo.png';
+
+const editor = document.getElementById('editor');
+const textInput = document.getElementById('text-input');
+const fontSelect = document.getElementById('font-select');
+const imageUpload = document.getElementById('image-upload');
+const bgUpload = document.getElementById('bg-upload');
+const bgColorPicker = document.getElementById('bg-color-picker');
+const logoUpload = document.getElementById('logo-upload');
+const posterLogo = document.getElementById('poster-logo');
+const posterDate = document.getElementById('poster-date');
+const showDateCheckbox = document.getElementById('show-date');
+
+let selectedElement = null;
+
+// Set post size (responsive)
+function setPostSize(size){
+    let widthVW = 90; // default 90vw
+    if(size==='square'){ editor.style.height = editor.style.width = widthVW+'vw'; }
+    else if(size==='landscape'){ editor.style.width = widthVW+'vw'; editor.style.height = (widthVW*566/1080)+'vw'; }
+    else if(size==='vertical'){ editor.style.width = widthVW+'vw'; editor.style.height = (widthVW*1350/1080)+'vw'; }
+}
+
+// Add text
+function addText(){
+    if(textInput.value.trim()==="") return;
+    const div=document.createElement('div');
+    div.classList.add('draggable','text-block');
+    div.contentEditable=true;
+    div.innerText=textInput.value;
+    div.style.top='10%'; 
+    div.style.left='10%'; 
+    div.style.fontFamily=fontSelect.value;
+    makeDraggableResizable(div);
+    editor.appendChild(div);
+    textInput.value="";
+}
+
+// Image upload
+imageUpload.addEventListener('change', e=>{
+    const file=e.target.files[0];
+    if(file){
+        const reader=new FileReader();
+        reader.onload=function(event){
+            const div=document.createElement('div');
+            div.classList.add('draggable','image-block');
+            div.style.top='20%'; div.style.left='20%';
+            div.innerHTML=`<img src="${event.target.result}">`;
+            makeDraggableResizable(div);
+            editor.appendChild(div);
+        }
+        reader.readAsDataURL(file);
+    }
+});
+
+// Background
+bgUpload.addEventListener('change', e=>{
+    const file=e.target.files[0];
+    if(file){
+        const reader=new FileReader();
+        reader.onload=function(event){ editor.style.background=`url(${event.target.result}) no-repeat center/cover`; }
+        reader.readAsDataURL(file);
+    }
+});
+bgColorPicker.addEventListener('change', e=>{ editor.style.background=e.target.value; });
+
+// Logo upload
+logoUpload.addEventListener('change', e=>{
+    const file=e.target.files[0];
+    if(file){
+        const reader=new FileReader();
+        reader.onload=function(event){
+            posterLogo.src = event.target.result;
+            posterLogo.style.display = 'block';
+        }
+        reader.readAsDataURL(file);
+    }
+});
+
+// Show/Hide date
+function toggleDate() {
+    if(showDateCheckbox.checked){
+        const now = new Date();
+        const day = String(now.getDate()).padStart(2, '0');
+        const monthNames = ["Jan", "Feb", "Mar", "Apr", "May", "Jun",
+                            "Jul", "Aug", "Sep", "Oct", "Nov", "Dec"];
+        const month = monthNames[now.getMonth()];
+        const year = now.getFullYear();
+        posterDate.innerText = `${day} ${month} ${year}`;
+        posterDate.style.display = 'block';
+    } else {
+        posterDate.style.display = 'none';
+    }
+}
+
+function setFontSizeSlider(value){
+    if(selectedElement){
+        // Convert px to vw relative to editor width
+        let editorWidth = editor.clientWidth;
+        selectedElement.style.fontSize = (value/360*editorWidth)+'px';
+    }
+}
+
+// Drag & Resize (responsive)
+function makeDraggableResizable(el){
+    el.addEventListener('mousedown', e=>{ 
+        selectedElement=el; 
+        document.querySelectorAll('.draggable').forEach(d=>d.classList.remove('selected')); 
+        el.classList.add('selected'); 
+    });
+
+    let isDragging=false, offsetX=0, offsetY=0;
+
+    el.addEventListener('mousedown', e=>{
+        isDragging=true; 
+        const rect = el.getBoundingClientRect();
+        offsetX = e.clientX - rect.left;
+        offsetY = e.clientY - rect.top;
+        e.stopPropagation();
+    });
+
+    document.addEventListener('mousemove', e=>{
+        if(isDragging){
+            const rect=editor.getBoundingClientRect();
+            let xPercent = ((e.clientX-offsetX-rect.left)/rect.width)*100;
+            let yPercent = ((e.clientY-offsetY-rect.top)/rect.height)*100;
+            xPercent = Math.min(Math.max(0, xPercent), 100);
+            yPercent = Math.min(Math.max(0, yPercent), 100);
+            el.style.left = xPercent + '%';
+            el.style.top = yPercent + '%';
+        }
+    });
+
+    document.addEventListener('mouseup', ()=>{ isDragging=false; });
+
+    el.addEventListener('wheel', e=>{
+        e.preventDefault();
+        if(el.classList.contains('text-block')){
+            let editorWidth = editor.clientWidth;
+            let size = parseInt(window.getComputedStyle(el).fontSize);
+            size += e.deltaY*-0.05;
+            size = Math.max(12, size);
+            el.style.fontSize = size + 'px';
+        } else if(el.classList.contains('image-block')){
+            let img = el.querySelector('img'); 
+            let width = img.width + e.deltaY*-0.1; 
+            let height = img.height + e.deltaY*-0.1; 
+            img.style.width=Math.max(30,width)+'px'; 
+            img.style.height='auto';
+        }
+    });
+}
+
+// Text styling
+function setBold(){ if(selectedElement) selectedElement.style.fontWeight=selectedElement.style.fontWeight==='bold'?'normal':'bold'; }
+function setItalic(){ if(selectedElement) selectedElement.style.fontStyle=selectedElement.style.fontStyle==='italic'?'normal':'italic'; }
+function setUnderline(){ if(selectedElement) selectedElement.style.textDecoration=selectedElement.style.textDecoration==='underline'?'none':'underline'; }
+function setTextColor(color){ if(selectedElement) selectedElement.style.color=color; }
+function setTextShadow(color){ if(selectedElement) selectedElement.style.textShadow=`2px 2px 5px ${color}`; }
+
+// Download
+function downloadPoster(){
+    html2canvas(editor,{scale:3}).then(canvas=>{
+        const link=document.createElement('a'); 
+        link.download='instagram_poster.png'; 
+        link.href=canvas.toDataURL(); 
+        link.click();
+    });
+}
+
+// Initialize default
+window.onload = () => {
+    setPostSize(defaultPostSize);
+    document.getElementById('post-size').value = defaultPostSize;
+    posterLogo.src = defaultLogoSrc;
+    posterLogo.style.display = 'block';
+};
+</script>
+
+</body>
+</html>
