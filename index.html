@@ -171,17 +171,30 @@ function setPostSize(size){
 // Add text
 function addText(){
     if(textInput.value.trim()==="") return;
-    const div=document.createElement('div');
+    const div = document.createElement('div');
     div.classList.add('draggable','text-block');
-    div.contentEditable=true;
-    div.innerText=textInput.value;
-    div.style.top='10%'; 
-    div.style.left='10%'; 
-    div.style.fontFamily=fontSelect.value;
+    div.contentEditable = true;
+    div.innerText = textInput.value;
+
+    // Position relative to editor (percent)
+    div.style.top = '10%';
+    div.style.left = '10%';
+
+    // Font-size relative to editor width
+    const editorWidth = editor.clientWidth;
+    div.style.fontSize = (24 / 360 * editorWidth) + 'px';  // 24px default relative to 360px width
+
+    div.style.fontFamily = fontSelect.value;
+
+    // Store responsive positions
+    div.dataset.leftPercent = 10;
+    div.dataset.topPercent = 10;
+
     makeDraggableResizable(div);
     editor.appendChild(div);
-    textInput.value="";
+    textInput.value = "";
 }
+
 
 // Image upload
 imageUpload.addEventListener('change', e=>{
@@ -322,6 +335,30 @@ window.onload = () => {
     posterLogo.src = defaultLogoSrc;
     posterLogo.style.display = 'block';
 };
+
+window.addEventListener('resize', ()=>{
+    const editorWidth = editor.clientWidth;
+    const editorHeight = editor.clientHeight;
+
+    document.querySelectorAll('.draggable').forEach(el=>{
+        // Position
+        if(el.dataset.leftPercent) el.style.left = el.dataset.leftPercent + '%';
+        if(el.dataset.topPercent) el.style.top = el.dataset.topPercent + '%';
+
+        // Font-size scaling for text-block
+        if(el.classList.contains('text-block')){
+            const defaultFontPx = 24; // default font size
+            el.style.fontSize = (defaultFontPx / 360 * editorWidth) + 'px';
+        }
+
+        // Image scaling (optional)
+        if(el.classList.contains('image-block')){
+            const img = el.querySelector('img');
+            if(img) img.style.width = '20%';
+        }
+    });
+});
+
 </script>
 
 </body>
